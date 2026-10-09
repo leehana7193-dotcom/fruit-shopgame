@@ -1,0 +1,903 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>과일가게 내전/게임 포인트 명령어 생성기</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <style>
+        @import url('https://cdn.jsdelivr.net/gh/orioncactus/pretendard/dist/web/static/pretendard.css');
+        body { font-family: 'Pretendard', sans-serif; }
+        
+        /* Draggable Memo Window Custom Styling */
+        .memo-window {
+            box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.5), 0 8px 10px -6px rgba(0, 0, 0, 0.5);
+            resize: both;
+            overflow: hidden;
+            min-width: 280px;
+            min-height: 200px;
+        }
+    </style>
+</head>
+<body class="bg-slate-900 text-slate-100 min-h-screen pb-12 select-none">
+    <!-- Header -->
+    <header class="bg-slate-800 border-b border-slate-700 p-4 sticky top-0 z-40 shadow-md">
+        <div class="max-w-5xl mx-auto flex justify-between items-center">
+            <div class="flex items-center gap-3">
+                <span class="text-3xl">🍊</span>
+                <div>
+                    <h1 class="font-bold text-xl text-white">과일가게 내전/게임 포인트 생성기</h1>
+                    <p class="text-xs text-slate-400">디스코드 포인트 지급 & 차감 명령어 자동 생성</p>
+                </div>
+            </div>
+            
+            <div class="flex items-center gap-2">
+                <!-- Notepad Toggle Button -->
+                <button onclick="toggleMemoPad()" class="bg-slate-700 hover:bg-slate-600 text-amber-300 border border-slate-600 px-3 py-1.5 rounded-xl text-xs font-semibold flex items-center gap-1.5 transition">
+                    <i class="fa-regular fa-note-sticky text-amber-400"></i>
+                    <span>메모장</span>
+                </button>
+
+                <!-- Developer Settings Button -->
+                <button onclick="openAuthModal()" class="bg-slate-700 hover:bg-slate-600 text-slate-300 border border-slate-600 px-3 py-1.5 rounded-xl text-xs font-semibold flex items-center gap-1.5 transition" title="개발자 설정">
+                    <i class="fa-solid fa-gear text-amber-400"></i>
+                    <span>설정</span>
+                </button>
+
+                <!-- Maker Tag -->
+                <span class="bg-amber-500/20 text-amber-400 border border-amber-500/30 text-xs px-3 py-1.5 rounded-xl font-medium">
+                    소원
+                </span>
+            </div>
+        </div>
+    </header>
+
+    <main class="max-w-5xl mx-auto p-4 md:p-6 space-y-6">
+        <!-- Global Settings Section -->
+        <section class="bg-slate-800/80 backdrop-blur rounded-2xl p-5 border border-slate-700/80 shadow-lg">
+            <h2 class="text-sm font-semibold text-slate-400 uppercase tracking-wider mb-4 flex items-center justify-between">
+                <span class="flex items-center gap-2">
+                    <i class="fa-solid fa-sliders text-amber-400"></i> 공통 정보 설정
+                </span>
+                <!-- 내전 / 게임 구분 선택 토글 -->
+                <div class="flex items-center bg-slate-900 p-1 rounded-xl border border-slate-700">
+                    <button onclick="setCategory('match')" id="cat-match" class="px-3 py-1 rounded-lg text-xs font-bold transition bg-amber-500 text-slate-950">
+                        🍊 내전
+                    </button>
+                    <button onclick="setCategory('game')" id="cat-game" class="px-3 py-1 rounded-lg text-xs font-bold transition text-slate-400 hover:text-slate-200">
+                        🎮 게임
+                    </button>
+                </div>
+            </h2>
+            
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <!-- Date Input -->
+                <div>
+                    <label class="block text-xs font-medium text-slate-300 mb-1" id="dateLabel">내전 날짜</label>
+                    <div class="flex gap-2">
+                        <input type="text" id="globalDate" placeholder="예: 10.08 또는 10/08" 
+                            class="w-full bg-slate-900 border border-slate-700 rounded-xl px-3.5 py-2.5 text-sm focus:outline-none focus:border-amber-500 transition select-text">
+                        <button onclick="setTodayDate()" class="bg-slate-700 hover:bg-slate-600 px-3 py-2 rounded-xl text-xs font-medium whitespace-nowrap transition">
+                            오늘 날짜
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Title Input & Presets -->
+                <div>
+                    <div class="flex justify-between items-center mb-1">
+                        <label class="block text-xs font-medium text-slate-300" id="gameNameLabel">내전 이름 (종목명만 작성)</label>
+                        <div class="relative">
+                            <button onclick="togglePresetMenu()" class="text-xs text-amber-400 hover:text-amber-300 font-medium flex items-center gap-1 transition">
+                                <i class="fa-solid fa-bars-staggered text-[11px]"></i> 자주 열리는 항목
+                            </button>
+                            <!-- 드롭다운 메뉴 -->
+                            <div id="presetMenu" class="hidden absolute right-0 mt-2 w-48 bg-slate-800 border border-slate-700 rounded-xl shadow-2xl z-50 p-1.5 space-y-1">
+                                <!-- Dynamic JS Insertion -->
+                            </div>
+                        </div>
+                    </div>
+                    <input type="text" id="globalGameName" placeholder="예: 발로란트 일반전, 롤 협곡 ('내전'/'게임' 미입력)" 
+                        class="w-full bg-slate-900 border border-slate-700 rounded-xl px-3.5 py-2.5 text-sm focus:outline-none focus:border-amber-500 transition select-text">
+                    
+                    <!-- 빠른 선택 태그 칩 (아이콘 없이 글자만) -->
+                    <div class="flex flex-wrap gap-1.5 mt-2" id="presetChips">
+                        <!-- Dynamic JS Insertion -->
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Main Form & Generator Area -->
+        <div class="grid grid-cols-1 lg:grid-cols-12 gap-6">
+            <!-- Left Options -->
+            <div class="lg:col-span-5 space-y-5">
+                <div class="bg-slate-800 rounded-2xl p-5 border border-slate-700 shadow-lg space-y-4">
+                    <h2 class="text-sm font-semibold text-slate-400 uppercase tracking-wider flex items-center gap-2">
+                        <i class="fa-solid fa-list-check text-amber-400"></i> 지급 유형 선택
+                    </h2>
+                    
+                    <div class="grid grid-cols-2 gap-2" id="typeButtons">
+                        <button onclick="selectType('win')" id="btn-win" class="type-btn p-3 rounded-xl border text-left flex flex-col justify-between transition bg-amber-500/10 border-amber-500/50 text-amber-300">
+                            <span class="text-xs opacity-75" id="type-win-sub">승리 팀</span>
+                            <span class="font-bold text-sm" id="type-win-title">내전 승리</span>
+                        </button>
+                        <button onclick="selectType('loss')" id="btn-loss" class="type-btn p-3 rounded-xl border text-left flex flex-col justify-between transition bg-slate-900 border-slate-700 text-slate-400">
+                            <span class="text-xs opacity-75" id="type-loss-sub">패배 팀</span>
+                            <span class="font-bold text-sm" id="type-loss-title">내전 패배</span>
+                        </button>
+                        <button onclick="selectType('host')" id="btn-host" class="type-btn p-3 rounded-xl border text-left flex flex-col justify-between transition bg-slate-900 border-slate-700 text-slate-400">
+                            <span class="text-xs opacity-75">진행자 (<span id="hostDefaultPtLabel">150</span>pt)</span>
+                            <span class="font-bold text-sm" id="type-host-title">내전 진행</span>
+                        </button>
+                        <button onclick="selectType('join')" id="btn-join" class="type-btn p-3 rounded-xl border text-left flex flex-col justify-between transition bg-slate-900 border-slate-700 text-slate-400">
+                            <span class="text-xs opacity-75">참가</span>
+                            <span class="font-bold text-sm" id="type-join-title">내전 참가</span>
+                        </button>
+                        <button onclick="selectType('request')" id="btn-request" class="type-btn p-3 rounded-xl border text-left flex flex-col justify-between transition bg-slate-900 border-slate-700 text-slate-400">
+                            <span class="text-xs opacity-75">요청</span>
+                            <span class="font-bold text-sm" id="type-req-title">내전 요청</span>
+                        </button>
+                        <button onclick="selectType('deduct')" id="btn-deduct" class="type-btn p-3 rounded-xl border text-left flex flex-col justify-between transition bg-slate-900 border-slate-700 text-slate-400">
+                            <span class="text-xs opacity-75">차감</span>
+                            <span class="font-bold text-sm text-rose-400">포인트 차감</span>
+                        </button>
+                        <button onclick="selectType('warning')" id="btn-warning" class="type-btn p-3 rounded-xl border text-left flex flex-col justify-between transition bg-slate-900 border-slate-700 text-slate-400 col-span-2 sm:col-span-1">
+                            <span class="text-xs opacity-75">경고 양식</span>
+                            <span class="font-bold text-sm text-amber-400">⚠️ 내전 경고</span>
+                        </button>
+                    </div>
+
+                    <!-- Points / Deduct Reason / Warning Inputs -->
+                    <div class="space-y-3 pt-2 border-t border-slate-700/60">
+                        <div id="pointsInputGroup">
+                            <label class="block text-xs font-medium text-slate-300 mb-1" id="pointsLabel">지급 포인트</label>
+                            <div class="flex flex-wrap gap-1.5">
+                                <input type="number" id="pointsValue" value="200" placeholder="예: 200" 
+                                    class="flex-1 min-w-[100px] bg-slate-900 border border-slate-700 rounded-xl px-3.5 py-2 text-sm focus:outline-none focus:border-amber-500 transition select-text">
+                                <button onclick="addPoints(50)" class="bg-slate-700 hover:bg-slate-600 active:bg-amber-600 px-2.5 py-1.5 rounded-xl text-xs font-medium whitespace-nowrap transition">+50pt</button>
+                                <button onclick="addPoints(100)" class="bg-slate-700 hover:bg-slate-600 active:bg-amber-600 px-2.5 py-1.5 rounded-xl text-xs font-medium whitespace-nowrap transition">+100pt</button>
+                                <button onclick="addPoints(150)" class="bg-slate-700 hover:bg-slate-600 active:bg-amber-600 px-2.5 py-1.5 rounded-xl text-xs font-medium whitespace-nowrap transition">+150pt</button>
+                                <button onclick="resetPoints()" class="bg-rose-950/60 hover:bg-rose-900 border border-rose-800/60 text-rose-300 px-2.5 py-1.5 rounded-xl text-xs font-medium whitespace-nowrap transition flex items-center gap-1" title="포인트 초기화">
+                                    <i class="fa-solid fa-rotate-right text-[10px]"></i> 초기화
+                                </button>
+                            </div>
+                        </div>
+
+                        <div id="deductReasonGroup" class="hidden">
+                            <label class="block text-xs font-medium text-slate-300 mb-1">차감 사유</label>
+                            <input type="text" id="deductReason" placeholder="예: 역선권 구매 등" 
+                                class="w-full bg-slate-900 border border-slate-700 rounded-xl px-3.5 py-2 text-sm focus:outline-none focus:border-amber-500 transition select-text">
+                        </div>
+
+                        <!-- Warning Details Input Group -->
+                        <div id="warningInputGroup" class="hidden space-y-2.5">
+                            <div>
+                                <label class="block text-xs font-medium text-slate-300 mb-1">경고 사유</label>
+                                <input type="text" id="warningReason" placeholder="예: 내전 노쇼, 내전 지각 등" 
+                                    class="w-full bg-slate-900 border border-slate-700 rounded-xl px-3.5 py-2 text-sm focus:outline-none focus:border-amber-500 transition select-text">
+                            </div>
+                            <div class="grid grid-cols-2 gap-2">
+                                <div>
+                                    <label class="block text-xs font-medium text-slate-300 mb-1">주의 / 경고 횟수</label>
+                                    <div class="flex gap-1.5 items-center">
+                                        <div class="flex bg-slate-900 p-0.5 rounded-lg border border-slate-700 shrink-0">
+                                            <button type="button" onclick="setWarningType('경고')" id="warn-type-경고" class="px-2 py-1 rounded-md text-xs font-bold transition bg-amber-500 text-slate-950">경고</button>
+                                            <button type="button" onclick="setWarningType('주의')" id="warn-type-주의" class="px-2 py-1 rounded-md text-xs font-bold transition text-slate-400 hover:text-slate-200">주의</button>
+                                        </div>
+                                        <div class="flex items-center bg-slate-900 border border-slate-700 rounded-xl px-2.5 py-1.5 w-20 focus-within:border-amber-500 transition shrink-0">
+                                            <input type="number" id="warningNum" placeholder="1" min="1" 
+                                                class="w-full bg-transparent text-sm focus:outline-none text-center select-text p-0">
+                                            <span class="text-xs text-slate-400 shrink-0 ml-1">회</span>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div>
+                                    <label class="block text-xs font-medium text-slate-300 mb-1">누적 주의 / 경고 횟수</label>
+                                    <input type="text" id="warningTotal" placeholder="예: 누적 경고 1회" 
+                                        class="w-full bg-slate-900 border border-slate-700 rounded-xl px-3.5 py-2 text-sm focus:outline-none focus:border-amber-500 transition select-text">
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Discord User IDs Textarea -->
+                    <div>
+                        <div class="flex justify-between items-center mb-1">
+                            <label class="block text-xs font-medium text-slate-300">
+                                디스코드 고유 ID 또는 멘션 (줄바꿈/띄어쓰기)
+                            </label>
+                            <div class="flex items-center gap-2">
+                                <button onclick="clearDiscordIds()" class="text-[11px] text-rose-400 hover:text-rose-300 transition flex items-center gap-1" title="아이디 입력창 비우기">
+                                    <i class="fa-solid fa-trash-can text-[10px]"></i> 초기화
+                                </button>
+                            </div>
+                        </div>
+                        <textarea id="discordIds" rows="5" placeholder="예:&#10;123456789012345678&#10;<@234567890123456789>"
+                            class="w-full bg-slate-900 border border-slate-700 rounded-xl p-3 text-sm font-mono focus:outline-none focus:border-amber-500 transition select-text"></textarea>
+                    </div>
+
+                    <button onclick="generateCommands()" class="w-full bg-amber-500 hover:bg-amber-600 text-slate-950 font-bold py-3 rounded-xl transition shadow-lg shadow-amber-500/20 flex items-center justify-center gap-2">
+                        <i class="fa-solid fa-wand-magic-sparkles"></i> 명령어 생성하기
+                    </button>
+                </div>
+            </div>
+
+            <!-- Right Output Area -->
+            <div class="lg:col-span-7">
+                <div class="bg-slate-800 rounded-2xl p-5 border border-slate-700 shadow-lg h-full flex flex-col">
+                    <div class="flex justify-between items-center mb-4">
+                        <h2 class="text-sm font-semibold text-slate-400 uppercase tracking-wider flex items-center gap-2">
+                            <i class="fa-solid fa-terminal text-amber-400"></i> 생성된 디스코드 명령어
+                        </h2>
+                        <button onclick="copyAllCommands()" id="copyAllBtn" class="bg-amber-500/20 border border-amber-500/40 text-amber-300 hover:bg-amber-500 hover:text-slate-950 px-3.5 py-1.5 rounded-xl text-xs font-semibold transition flex items-center gap-1.5">
+                            <i class="fa-regular fa-copy"></i> 전체 복사
+                        </button>
+                    </div>
+
+                    <div id="outputArea" class="flex-1 bg-slate-950 border border-slate-800 rounded-xl p-4 font-mono text-sm overflow-y-auto min-h-[300px] max-h-[520px] space-y-2 text-slate-300 select-text">
+                        <p class="text-slate-500 text-xs text-center py-12">
+                            왼쪽에서 정보를 입력하고 <br><span class="text-amber-400 font-semibold">[명령어 생성하기]</span> 버튼을 눌러주세요.
+                        </p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <!-- Draggable Floating Notepad Window -->
+    <div id="memoWindow" class="hidden fixed top-24 right-8 w-80 h-96 bg-slate-800 border border-slate-600 rounded-2xl memo-window z-50 flex flex-col">
+        <!-- Memo Header (Draggable Handle) -->
+        <div id="memoHeader" class="bg-slate-700/80 px-4 py-2.5 rounded-t-2xl flex justify-between items-center cursor-move border-b border-slate-600">
+            <span class="text-xs font-bold text-amber-300 flex items-center gap-1.5">
+                <i class="fa-regular fa-note-sticky"></i> 메모장 (창 모드 - 상단 드래그)
+            </span>
+            <div class="flex items-center gap-2">
+                <button onclick="clearMemoPad()" class="text-slate-400 hover:text-rose-400 text-xs transition" title="메모 비우기">
+                    <i class="fa-solid fa-trash-can"></i>
+                </button>
+                <button onclick="toggleMemoPad()" class="text-slate-400 hover:text-white text-xs transition">
+                    <i class="fa-solid fa-xmark"></i>
+                </button>
+            </div>
+        </div>
+        <!-- Memo Body -->
+        <div class="flex-1 p-3 flex flex-col bg-slate-900/90 rounded-b-2xl">
+            <textarea id="memoContent" oninput="saveMemoContent()" placeholder="임시 명단이나 디스코드 ID, 메모할 내용을 적어두세요 (자동 저장)" 
+                class="w-full flex-1 bg-transparent text-xs text-slate-200 resize-none focus:outline-none font-mono leading-relaxed select-text"></textarea>
+        </div>
+    </div>
+
+    <!-- Developer Auth Modal -->
+    <div id="authModal" class="hidden fixed inset-0 bg-slate-950/80 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+        <div class="bg-slate-800 border border-slate-700 rounded-2xl max-w-sm w-full p-6 shadow-2xl space-y-4">
+            <div class="flex justify-between items-center border-b border-slate-700 pb-3">
+                <h3 class="font-bold text-amber-400 flex items-center gap-2 text-base">
+                    <i class="fa-solid fa-lock"></i> 개발자 인증
+                </h3>
+                <button onclick="closeAuthModal()" class="text-slate-400 hover:text-white text-sm">
+                    <i class="fa-solid fa-xmark"></i>
+                </button>
+            </div>
+            <p class="text-xs text-slate-300">개발자 비밀번호를 입력해주세요.</p>
+            <div>
+                <input type="password" id="adminPasswordInput" placeholder="비밀번호 입력"
+                    class="w-full bg-slate-900 border border-slate-700 rounded-xl px-3.5 py-2.5 text-sm focus:outline-none focus:border-amber-500 transition select-text"
+                    onkeydown="if(event.key==='Enter') checkAdminPassword()">
+                <p id="authErrorMsg" class="text-rose-400 text-xs mt-1.5 hidden">⚠️ 비밀번호가 일치하지 않습니다.</p>
+            </div>
+            <div class="flex justify-end gap-2 pt-2">
+                <button onclick="closeAuthModal()" class="px-3.5 py-2 rounded-xl text-xs bg-slate-700 hover:bg-slate-600 text-slate-300 transition">취소</button>
+                <button onclick="checkAdminPassword()" class="px-4 py-2 rounded-xl text-xs bg-amber-500 hover:bg-amber-600 text-slate-950 font-bold transition">확인</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Developer Settings Modal -->
+    <div id="adminModal" class="hidden fixed inset-0 bg-slate-950/80 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+        <div class="bg-slate-800 border border-slate-700 rounded-2xl max-w-xl w-full p-6 shadow-2xl space-y-5 max-h-[90vh] overflow-y-auto">
+            <div class="flex justify-between items-center border-b border-slate-700 pb-3">
+                <h3 class="font-bold text-amber-400 flex items-center gap-2 text-base">
+                    <i class="fa-solid fa-gear"></i> 개발자 옵션 및 설정
+                </h3>
+                <button onclick="closeAdminModal()" class="text-slate-400 hover:text-white text-sm">
+                    <i class="fa-solid fa-xmark"></i>
+                </button>
+            </div>
+
+            <!-- Section 1: Bot Commands Prefix & Keywords -->
+            <div class="space-y-2 border-b border-slate-700/60 pb-4">
+                <h4 class="text-xs font-bold text-amber-400 uppercase tracking-wider flex items-center gap-1.5">
+                    <i class="fa-solid fa-robot"></i> 1. 명령어 접두사 & 키워드 설정
+                </h4>
+                <div class="grid grid-cols-3 gap-2">
+                    <div>
+                        <label class="block text-[11px] text-slate-400 mb-1">접두사 (Prefix)</label>
+                        <input type="text" id="adminPrefix" class="w-full bg-slate-900 border border-slate-700 rounded-xl p-2 text-xs text-amber-300 font-mono focus:outline-none focus:border-amber-500 select-text">
+                    </div>
+                    <div>
+                        <label class="block text-[11px] text-slate-400 mb-1">지급 명령어</label>
+                        <input type="text" id="adminGrantCmd" class="w-full bg-slate-900 border border-slate-700 rounded-xl p-2 text-xs focus:outline-none focus:border-amber-500 select-text">
+                    </div>
+                    <div>
+                        <label class="block text-[11px] text-slate-400 mb-1">차감 명령어</label>
+                        <input type="text" id="adminDeductCmd" class="w-full bg-slate-900 border border-slate-700 rounded-xl p-2 text-xs focus:outline-none focus:border-amber-500 select-text">
+                    </div>
+                </div>
+            </div>
+
+            <!-- Section 2: Default Points by Type -->
+            <div class="space-y-2 border-b border-slate-700/60 pb-4">
+                <h4 class="text-xs font-bold text-amber-400 uppercase tracking-wider flex items-center gap-1.5">
+                    <i class="fa-solid fa-coins"></i> 2. 유형별 기본 지급 포인트 설정
+                </h4>
+                <div class="grid grid-cols-3 md:grid-cols-6 gap-2">
+                    <div>
+                        <label class="block text-[11px] text-slate-400 mb-1">승리</label>
+                        <input type="number" id="adminWinPt" class="w-full bg-slate-900 border border-slate-700 rounded-xl p-2 text-xs text-center focus:outline-none focus:border-amber-500 select-text">
+                    </div>
+                    <div>
+                        <label class="block text-[11px] text-slate-400 mb-1">패배</label>
+                        <input type="number" id="adminLossPt" class="w-full bg-slate-900 border border-slate-700 rounded-xl p-2 text-xs text-center focus:outline-none focus:border-amber-500 select-text">
+                    </div>
+                    <div>
+                        <label class="block text-[11px] text-slate-400 mb-1">진행자</label>
+                        <input type="number" id="adminHostPt" class="w-full bg-slate-900 border border-slate-700 rounded-xl p-2 text-xs text-center focus:outline-none focus:border-amber-500 select-text">
+                    </div>
+                    <div>
+                        <label class="block text-[11px] text-slate-400 mb-1">참가</label>
+                        <input type="number" id="adminJoinPt" class="w-full bg-slate-900 border border-slate-700 rounded-xl p-2 text-xs text-center focus:outline-none focus:border-amber-500 select-text">
+                    </div>
+                    <div>
+                        <label class="block text-[11px] text-slate-400 mb-1">요청</label>
+                        <input type="number" id="adminReqPt" class="w-full bg-slate-900 border border-slate-700 rounded-xl p-2 text-xs text-center focus:outline-none focus:border-amber-500 select-text">
+                    </div>
+                    <div>
+                        <label class="block text-[11px] text-slate-400 mb-1">차감</label>
+                        <input type="number" id="adminDeductPt" class="w-full bg-slate-900 border border-slate-700 rounded-xl p-2 text-xs text-center focus:outline-none focus:border-amber-500 select-text">
+                    </div>
+                </div>
+            </div>
+
+            <!-- Section 3: Mention Clean Option -->
+            <div class="space-y-2 border-b border-slate-700/60 pb-4">
+                <h4 class="text-xs font-bold text-amber-400 uppercase tracking-wider flex items-center gap-1.5">
+                    <i class="fa-solid fa-wand-magic-sparkles"></i> 3. 입력 데이터 자동 정제
+                </h4>
+                <label class="flex items-center gap-2 cursor-pointer bg-slate-900/60 p-2.5 rounded-xl border border-slate-700/80 hover:border-slate-600 transition">
+                    <input type="checkbox" id="adminCleanMentions" class="w-4 h-4 accent-amber-500 rounded">
+                    <span class="text-xs text-slate-200 font-medium">디스코드 멘션(<code class="text-amber-400">&lt;@12345...&gt;</code>) 붙여넣기 시 고유 숫자 ID만 자동 추출</span>
+                </label>
+            </div>
+
+            <!-- Section 4: Match & Game Presets Admin -->
+            <div class="space-y-3">
+                <h4 class="text-xs font-bold text-amber-400 uppercase tracking-wider flex items-center gap-1.5">
+                    <i class="fa-solid fa-list"></i> 4. 자주 열리는 항목 목록 (쉼표로 구분)
+                </h4>
+                <div class="space-y-1.5">
+                    <label class="block text-[11px] text-slate-400">🍊 내전 목록</label>
+                    <textarea id="adminMatchPresets" rows="2" 
+                        class="w-full bg-slate-900 border border-slate-700 rounded-xl p-2.5 text-xs focus:outline-none focus:border-amber-500 transition select-text"></textarea>
+                </div>
+                <div class="space-y-1.5">
+                    <label class="block text-[11px] text-slate-400">🎮 게임 목록</label>
+                    <textarea id="adminGamePresets" rows="2" 
+                        class="w-full bg-slate-900 border border-slate-700 rounded-xl p-2.5 text-xs focus:outline-none focus:border-amber-500 transition select-text"></textarea>
+                </div>
+            </div>
+
+            <div class="flex justify-between items-center pt-3 border-t border-slate-700">
+                <button onclick="resetAdminDefaults()" class="text-xs text-rose-400 hover:text-rose-300 flex items-center gap-1">
+                    <i class="fa-solid fa-rotate-left"></i> 기본값으로 리셋
+                </button>
+                <div class="flex gap-2">
+                    <button onclick="closeAdminModal()" class="px-3.5 py-2 rounded-xl text-xs bg-slate-700 hover:bg-slate-600 text-slate-300 transition">취소</button>
+                    <button onclick="saveAdminSettings()" class="px-4 py-2 rounded-xl text-xs bg-amber-500 hover:bg-amber-600 text-slate-950 font-bold transition">저장하기</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let currentType = 'win';
+        let currentCategory = 'match'; // 'match' (내전) or 'game' (게임)
+        let currentWarnType = '경고'; // '경고' or '주의'
+
+        // Configuration State
+        let config = {
+            cmdPrefix: '?&',
+            cmdGrant: '포인트지급',
+            cmdDeduct: '포인트차감',
+            cleanMentions: true,
+            winPt: 200,
+            lossPt: 100,
+            hostPt: 150,
+            joinPt: 100,
+            reqPt: 100,
+            deductPt: 100,
+            matchPresets: ['발로란트 일반전', '발로란트 난투', '증강 칼바람', '롤 협곡'],
+            gamePresets: ['구스구스덕', '마피아42']
+        };
+
+        // Initialize state on load
+        window.onload = function() {
+            loadSavedSettings();
+            setTodayDate();
+            renderPresets();
+            selectType('win');
+            loadMemoContent();
+            makeDraggable(document.getElementById('memoWindow'), document.getElementById('memoHeader'));
+
+            // Close preset menu when clicking outside
+            document.addEventListener('click', function(e) {
+                const menu = document.getElementById('presetMenu');
+                const btn = e.target.closest('button');
+                if (!menu.contains(e.target) && (!btn || !btn.getAttribute('onclick')?.includes('togglePresetMenu'))) {
+                    menu.classList.add('hidden');
+                }
+            });
+        };
+
+        // Load settings from localStorage
+        function loadSavedSettings() {
+            const savedConfig = localStorage.getItem('fg_generator_config');
+            if (savedConfig) {
+                try {
+                    const parsed = JSON.parse(savedConfig);
+                    config = { ...config, ...parsed };
+                } catch(e) {
+                    console.error('Failed to parse saved config:', e);
+                }
+            }
+
+            document.getElementById('hostDefaultPtLabel').innerText = config.hostPt;
+        }
+
+        // Render Dropdown and Chips dynamically based on category
+        function renderPresets() {
+            const dropdown = document.getElementById('presetMenu');
+            const chips = document.getElementById('presetChips');
+            dropdown.innerHTML = '';
+            chips.innerHTML = '';
+
+            const activeList = currentCategory === 'match' ? config.matchPresets : config.gamePresets;
+
+            activeList.forEach(item => {
+                const dropBtn = document.createElement('button');
+                dropBtn.className = 'w-full text-left px-3 py-1.5 text-xs text-slate-200 hover:bg-amber-500/20 hover:text-amber-300 rounded-lg transition';
+                dropBtn.innerText = item;
+                dropBtn.onclick = () => setPresetGame(item);
+                dropdown.appendChild(dropBtn);
+
+                const chipBtn = document.createElement('button');
+                chipBtn.className = 'bg-slate-900 hover:bg-slate-700 border border-slate-700 text-slate-300 px-2.5 py-1 rounded-lg text-[11px] transition';
+                chipBtn.innerText = item;
+                chipBtn.onclick = () => setPresetGame(item);
+                chips.appendChild(chipBtn);
+            });
+        }
+
+        function setCategory(cat) {
+            currentCategory = cat;
+            const matchBtn = document.getElementById('cat-match');
+            const gameBtn = document.getElementById('cat-game');
+
+            if (cat === 'match') {
+                matchBtn.className = 'px-3 py-1 rounded-lg text-xs font-bold transition bg-amber-500 text-slate-950';
+                gameBtn.className = 'px-3 py-1 rounded-lg text-xs font-bold transition text-slate-400 hover:text-slate-200';
+                document.getElementById('dateLabel').innerText = '내전 날짜';
+                document.getElementById('gameNameLabel').innerText = '내전 이름 (종목명만 작성)';
+                document.getElementById('globalGameName').placeholder = "예: 발로란트 일반전, 롤 협곡 ('내전' 미입력)";
+
+                document.getElementById('type-win-sub').innerText = '승리 팀';
+                document.getElementById('type-win-title').innerText = '내전 승리';
+                document.getElementById('type-loss-sub').innerText = '패배 팀';
+                document.getElementById('type-loss-title').innerText = '내전 패배';
+                document.getElementById('type-host-title').innerText = '내전 진행';
+                document.getElementById('type-join-title').innerText = '내전 참가';
+                document.getElementById('type-req-title').innerText = '내전 요청';
+            } else {
+                gameBtn.className = 'px-3 py-1 rounded-lg text-xs font-bold transition bg-cyan-500 text-slate-950';
+                matchBtn.className = 'px-3 py-1 rounded-lg text-xs font-bold transition text-slate-400 hover:text-slate-200';
+                document.getElementById('dateLabel').innerText = '게임 날짜';
+                document.getElementById('gameNameLabel').innerText = '게임 이름 (종목명만 작성)';
+                document.getElementById('globalGameName').placeholder = "예: 구스구스덕, 마피아42 ('게임' 미입력)";
+
+                document.getElementById('type-win-sub').innerText = '승리';
+                document.getElementById('type-win-title').innerText = '게임 승리';
+                document.getElementById('type-loss-sub').innerText = '패배';
+                document.getElementById('type-loss-title').innerText = '게임 패배';
+                document.getElementById('type-host-title').innerText = '게임 진행';
+                document.getElementById('type-join-title').innerText = '게임 참가';
+                document.getElementById('type-req-title').innerText = '게임 요청';
+            }
+
+            renderPresets();
+        }
+
+        function togglePresetMenu() {
+            const menu = document.getElementById('presetMenu');
+            menu.classList.toggle('hidden');
+        }
+
+        function setPresetGame(baseName) {
+            const input = document.getElementById('globalGameName');
+            input.value = baseName;
+            document.getElementById('presetMenu').classList.add('hidden');
+        }
+
+        function setWarningType(type) {
+            currentWarnType = type;
+            const btnWarn = document.getElementById('warn-type-경고');
+            const btnCaution = document.getElementById('warn-type-주의');
+            if (type === '경고') {
+                btnWarn.className = 'px-2 py-1 rounded-md text-xs font-bold transition bg-amber-500 text-slate-950';
+                btnCaution.className = 'px-2 py-1 rounded-md text-xs font-bold transition text-slate-400 hover:text-slate-200';
+            } else {
+                btnCaution.className = 'px-2 py-1 rounded-md text-xs font-bold transition bg-amber-500 text-slate-950';
+                btnWarn.className = 'px-2 py-1 rounded-md text-xs font-bold transition text-slate-400 hover:text-slate-200';
+            }
+        }
+
+        // Set Date without Year (e.g. 10.08)
+        function setTodayDate() {
+            const today = new Date();
+            const month = String(today.getMonth() + 1).padStart(2, '0');
+            const day = String(today.getDate()).padStart(2, '0');
+            document.getElementById('globalDate').value = `${month}.${day}`;
+        }
+
+        function addPoints(val) {
+            const pointsInput = document.getElementById('pointsValue');
+            const currentVal = parseInt(pointsInput.value) || 0;
+            pointsInput.value = currentVal + val;
+        }
+
+        function resetPoints() {
+            document.getElementById('pointsValue').value = 0;
+        }
+
+        function selectType(type) {
+            currentType = type;
+            const buttons = document.querySelectorAll('.type-btn');
+            
+            buttons.forEach(btn => {
+                btn.className = 'type-btn p-3 rounded-xl border text-left flex flex-col justify-between transition bg-slate-900 border-slate-700 text-slate-400';
+            });
+
+            const activeBtn = document.getElementById(`btn-${type}`);
+            if (activeBtn) {
+                if (type === 'deduct') {
+                    activeBtn.className = 'type-btn p-3 rounded-xl border text-left flex flex-col justify-between transition bg-rose-950/40 border-rose-500/50 text-rose-300';
+                } else if (type === 'warning') {
+                    activeBtn.className = 'type-btn p-3 rounded-xl border text-left flex flex-col justify-between transition bg-amber-950/40 border-amber-500/50 text-amber-300';
+                } else {
+                    activeBtn.className = 'type-btn p-3 rounded-xl border text-left flex flex-col justify-between transition bg-amber-500/10 border-amber-500/50 text-amber-300';
+                }
+            }
+
+            const pointsInput = document.getElementById('pointsValue');
+            switch (type) {
+                case 'win': pointsInput.value = config.winPt; break;
+                case 'loss': pointsInput.value = config.lossPt; break;
+                case 'host': pointsInput.value = config.hostPt; break;
+                case 'join': pointsInput.value = config.joinPt; break;
+                case 'request': pointsInput.value = config.reqPt; break;
+                case 'deduct': pointsInput.value = config.deductPt; break;
+            }
+
+            const pointsGroup = document.getElementById('pointsInputGroup');
+            const deductGroup = document.getElementById('deductReasonGroup');
+            const warningGroup = document.getElementById('warningInputGroup');
+
+            if (type === 'deduct') {
+                pointsGroup.classList.remove('hidden');
+                deductGroup.classList.remove('hidden');
+                warningGroup.classList.add('hidden');
+                document.getElementById('pointsLabel').innerText = '차감 포인트';
+            } else if (type === 'warning') {
+                pointsGroup.classList.add('hidden');
+                deductGroup.classList.add('hidden');
+                warningGroup.classList.remove('hidden');
+            } else {
+                pointsGroup.classList.remove('hidden');
+                deductGroup.classList.add('hidden');
+                warningGroup.classList.add('hidden');
+                document.getElementById('pointsLabel').innerText = '지급 포인트';
+            }
+        }
+
+        function clearDiscordIds() {
+            document.getElementById('discordIds').value = '';
+        }
+
+        function generateCommands() {
+            const catSuffix = currentCategory === 'match' ? '내전' : '게임';
+            const globalDate = document.getElementById('globalDate').value.trim() || '날짜미입력';
+            let baseName = document.getElementById('globalGameName').value.trim();
+
+            baseName = baseName.replace(/(내전|게임)$/, '').trim();
+            const fullName = baseName ? `${baseName} ${catSuffix}` : catSuffix;
+
+            const points = document.getElementById('pointsValue').value.trim() || '0';
+            const deductReason = document.getElementById('deductReason').value.trim() || '차감';
+            
+            const warningReason = document.getElementById('warningReason').value.trim() || '내전 노쇼, 내전 지각';
+            const warnNumVal = document.getElementById('warningNum').value.trim() || '1';
+            const warningCount = `${currentWarnType} ${warnNumVal}회`;
+            const warningTotal = document.getElementById('warningTotal').value.trim() || '누적 경고 1회';
+
+            const rawIdsText = document.getElementById('discordIds').value.trim();
+            const outputArea = document.getElementById('outputArea');
+
+            if (!rawIdsText) {
+                outputArea.innerHTML = `<p class="text-rose-400 text-xs text-center py-8">⚠️ 디스코드 고유 아이디 또는 멘션을 1개 이상 입력해주세요.</p>`;
+                return;
+            }
+
+            let idList = rawIdsText.split(/[\n,\s]+/).filter(id => id.length > 0);
+
+            if (config.cleanMentions) {
+                idList = idList.map(item => {
+                    const matched = item.match(/\d{17,20}/);
+                    return matched ? matched[0] : item.replace(/[^\d]/g, '');
+                }).filter(id => id.length > 0);
+            }
+
+            if (idList.length === 0) {
+                outputArea.innerHTML = `<p class="text-rose-400 text-xs text-center py-8">⚠️ 올바른 디스코드 아이디를 찾지 못했습니다.</p>`;
+                return;
+            }
+
+            let commands = [];
+            const prefix = config.cmdPrefix || '?&';
+            const grantCmd = config.cmdGrant || '포인트지급';
+            const deductCmd = config.cmdDeduct || '포인트차감';
+
+            idList.forEach(id => {
+                let cmd = '';
+                switch (currentType) {
+                    case 'win':
+                        cmd = `${prefix}${grantCmd} ${id} ${points} ${globalDate} ${fullName} 승리`;
+                        break;
+                    case 'loss':
+                        cmd = `${prefix}${grantCmd} ${id} ${points} ${globalDate} ${fullName} 패배`;
+                        break;
+                    case 'host':
+                        cmd = `${prefix}${grantCmd} ${id} ${points} ${globalDate} ${fullName} 진행`;
+                        break;
+                    case 'join':
+                        cmd = `${prefix}${grantCmd} ${id} ${points} ${globalDate} ${fullName} 참가`;
+                        break;
+                    case 'request':
+                        cmd = `${prefix}${grantCmd} ${id} ${points} ${globalDate} ${fullName} 요청`;
+                        break;
+                    case 'deduct':
+                        cmd = `${prefix}${deductCmd} ${id} ${points} ${deductReason}`;
+                        break;
+                    case 'warning':
+                        cmd = `<@${id}> ${id}\n<:F_TKK_006:1244216521098526761> ${globalDate} ${fullName}\n<:F_TKK_006:1244216521098526761> ${warningReason}\n<:F_TKK_006:1244216521098526761> ${warningCount}\n<:F_TKK_006:1244216521098526761> ${warningTotal}`;
+                        break;
+                }
+                commands.push(cmd);
+            });
+
+            renderOutputs(commands);
+        }
+
+        function renderOutputs(commands) {
+            const outputArea = document.getElementById('outputArea');
+            outputArea.innerHTML = '';
+
+            commands.forEach((cmd) => {
+                const itemDiv = document.createElement('div');
+                itemDiv.className = 'flex items-start justify-between bg-slate-900 border border-slate-800 p-3 rounded-lg group hover:border-slate-700 transition gap-2';
+                
+                const codeSpan = document.createElement('span');
+                codeSpan.className = 'font-mono text-emerald-400 selection:bg-amber-500 selection:text-slate-950 break-all whitespace-pre-wrap leading-relaxed text-xs sm:text-sm';
+                codeSpan.innerText = cmd;
+
+                const copyBtn = document.createElement('button');
+                copyBtn.className = 'text-xs bg-slate-800 hover:bg-slate-700 text-slate-300 px-2.5 py-1 rounded transition whitespace-nowrap opacity-80 group-hover:opacity-100 flex items-center gap-1 shrink-0 mt-0.5';
+                copyBtn.innerHTML = `<i class="fa-regular fa-copy"></i> 복사`;
+                copyBtn.onclick = () => {
+                    navigator.clipboard.writeText(cmd);
+                    copyBtn.innerHTML = `<i class="fa-solid fa-check text-emerald-400"></i> 완료`;
+                    setTimeout(() => {
+                        copyBtn.innerHTML = `<i class="fa-regular fa-copy"></i> 복사`;
+                    }, 1500);
+                };
+
+                itemDiv.appendChild(codeSpan);
+                itemDiv.appendChild(copyBtn);
+                outputArea.appendChild(itemDiv);
+            });
+        }
+
+        function copyAllCommands() {
+            const codeSpans = document.querySelectorAll('#outputArea span.font-mono');
+            if (codeSpans.length === 0) return;
+
+            const fullText = Array.from(codeSpans).map(s => s.innerText).join('\n');
+            navigator.clipboard.writeText(fullText);
+
+            const btn = document.getElementById('copyAllBtn');
+            const originalHTML = btn.innerHTML;
+            btn.innerHTML = `<i class="fa-solid fa-check"></i> 복사 완료!`;
+            btn.classList.add('bg-emerald-500', 'text-slate-950');
+            
+            setTimeout(() => {
+                btn.innerHTML = originalHTML;
+                btn.classList.remove('bg-emerald-500', 'text-slate-950');
+            }, 1500);
+        }
+
+        // Notepad Functions
+        function toggleMemoPad() {
+            const memo = document.getElementById('memoWindow');
+            memo.classList.toggle('hidden');
+        }
+
+        function saveMemoContent() {
+            const text = document.getElementById('memoContent').value;
+            localStorage.setItem('fg_generator_memo', text);
+        }
+
+        function loadMemoContent() {
+            const saved = localStorage.getItem('fg_generator_memo');
+            if (saved !== null) {
+                document.getElementById('memoContent').value = saved;
+            }
+        }
+
+        function clearMemoPad() {
+            if (confirm('메모장의 내용을 모두 삭제하시겠습니까?')) {
+                document.getElementById('memoContent').value = '';
+                localStorage.removeItem('fg_generator_memo');
+            }
+        }
+
+        // Draggable Logic for Windowed Memo (Fixed Position Support)
+        function makeDraggable(element, handle) {
+            let isDragging = false;
+            let startX, startY, initialLeft, initialTop;
+
+            handle.addEventListener('mousedown', function(e) {
+                // Ignore drags when clicking action buttons on the header
+                if (e.target.closest('button')) return;
+
+                isDragging = true;
+                startX = e.clientX;
+                startY = e.clientY;
+
+                const rect = element.getBoundingClientRect();
+                initialLeft = rect.left;
+                initialTop = rect.top;
+
+                // Remove right alignment constraint during drag
+                element.style.right = 'auto';
+                element.style.left = `${initialLeft}px`;
+                element.style.top = `${initialTop}px`;
+
+                document.addEventListener('mousemove', onMouseMove);
+                document.addEventListener('mouseup', onMouseUp);
+            });
+
+            function onMouseMove(e) {
+                if (!isDragging) return;
+                const dx = e.clientX - startX;
+                const dy = e.clientY - startY;
+                element.style.left = `${initialLeft + dx}px`;
+                element.style.top = `${initialTop + dy}px`;
+            }
+
+            function onMouseUp() {
+                isDragging = false;
+                document.removeEventListener('mousemove', onMouseMove);
+                document.removeEventListener('mouseup', onMouseUp);
+            }
+        }
+
+        // Admin Auth Modal functions
+        function openAuthModal() {
+            document.getElementById('adminPasswordInput').value = '';
+            document.getElementById('authErrorMsg').classList.add('hidden');
+            document.getElementById('authModal').classList.remove('hidden');
+            document.getElementById('adminPasswordInput').focus();
+        }
+
+        function closeAuthModal() {
+            document.getElementById('authModal').classList.add('hidden');
+        }
+
+        function checkAdminPassword() {
+            const pwd = document.getElementById('adminPasswordInput').value;
+            if (pwd === '1021') {
+                closeAuthModal();
+                openAdminModal();
+            } else {
+                document.getElementById('authErrorMsg').classList.remove('hidden');
+            }
+        }
+
+        function openAdminModal() {
+            document.getElementById('adminPrefix').value = config.cmdPrefix;
+            document.getElementById('adminGrantCmd').value = config.cmdGrant;
+            document.getElementById('adminDeductCmd').value = config.cmdDeduct;
+
+            document.getElementById('adminWinPt').value = config.winPt;
+            document.getElementById('adminLossPt').value = config.lossPt;
+            document.getElementById('adminHostPt').value = config.hostPt;
+            document.getElementById('adminJoinPt').value = config.joinPt;
+            document.getElementById('adminReqPt').value = config.reqPt;
+            document.getElementById('adminDeductPt').value = config.deductPt;
+
+            document.getElementById('adminCleanMentions').checked = config.cleanMentions;
+
+            document.getElementById('adminMatchPresets').value = config.matchPresets.join(', ');
+            document.getElementById('adminGamePresets').value = config.gamePresets.join(', ');
+
+            document.getElementById('adminModal').classList.remove('hidden');
+        }
+
+        function closeAdminModal() {
+            document.getElementById('adminModal').classList.add('hidden');
+        }
+
+        function saveAdminSettings() {
+            config.cmdPrefix = document.getElementById('adminPrefix').value.trim() || '?&';
+            config.cmdGrant = document.getElementById('adminGrantCmd').value.trim() || '포인트지급';
+            config.cmdDeduct = document.getElementById('adminDeductCmd').value.trim() || '포인트차감';
+
+            config.winPt = parseInt(document.getElementById('adminWinPt').value) || 200;
+            config.lossPt = parseInt(document.getElementById('adminLossPt').value) || 100;
+            config.hostPt = parseInt(document.getElementById('adminHostPt').value) || 150;
+            config.joinPt = parseInt(document.getElementById('adminJoinPt').value) || 100;
+            config.reqPt = parseInt(document.getElementById('adminReqPt').value) || 100;
+            config.deductPt = parseInt(document.getElementById('adminDeductPt').value) || 100;
+
+            config.cleanMentions = document.getElementById('adminCleanMentions').checked;
+
+            const matchRaw = document.getElementById('adminMatchPresets').value;
+            const gameRaw = document.getElementById('adminGamePresets').value;
+
+            config.matchPresets = matchRaw.split(',').map(s => s.trim()).filter(s => s.length > 0);
+            config.gamePresets = gameRaw.split(',').map(s => s.trim()).filter(s => s.length > 0);
+
+            localStorage.setItem('fg_generator_config', JSON.stringify(config));
+
+            document.getElementById('hostDefaultPtLabel').innerText = config.hostPt;
+
+            renderPresets();
+            selectType(currentType);
+            closeAdminModal();
+        }
+
+        function resetAdminDefaults() {
+            if (confirm('모든 자주 열리는 항목과 설정을 초기 기본값으로 리셋하시겠습니까?')) {
+                config = {
+                    cmdPrefix: '?&',
+                    cmdGrant: '포인트지급',
+                    cmdDeduct: '포인트차감',
+                    cleanMentions: true,
+                    winPt: 200,
+                    lossPt: 100,
+                    hostPt: 150,
+                    joinPt: 100,
+                    reqPt: 100,
+                    deductPt: 100,
+                    matchPresets: ['발로란트 일반전', '발로란트 난투', '증강 칼바람', '롤 협곡'],
+                    gamePresets: ['구스구스덕', '마피아42']
+                };
+
+                localStorage.removeItem('fg_generator_config');
+                openAdminModal();
+                renderPresets();
+                selectType(currentType);
+            }
+        }
+    </script>
+</body>
+</html>
